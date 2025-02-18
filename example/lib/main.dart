@@ -3,8 +3,9 @@ import 'dart:developer';
 import 'dart:typed_data';
 
 import 'package:epson_epos/epson_epos.dart';
-import 'package:esc_pos_utils/esc_pos_utils.dart';
+import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() {
   runApp(MyApp());
@@ -28,6 +29,14 @@ class _MyAppState extends State<MyApp> {
   Future<void> initPlatformState() async {
     if (!mounted) return;
 
+    print('loc');
+    print(await Permission.location.request());
+    print('conn');
+    print(await Permission.bluetoothConnect.request());
+    print('bt');
+    print(await Permission.bluetooth.request());
+    print('scan');
+    print(await Permission.bluetoothScan.request());
     setState(() {});
   }
 
@@ -46,22 +55,24 @@ class _MyAppState extends State<MyApp> {
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  ElevatedButton(
-                      onPressed: () => onDiscovery(EpsonEPOSPortType.TCP),
-                      child: Text('Discovery TCP')),
-                  ElevatedButton(
-                      onPressed: () => onDiscovery(EpsonEPOSPortType.USB),
-                      child: Text('Discovery USB')),
-                  ElevatedButton(
-                      onPressed: () => onDiscovery(EpsonEPOSPortType.BLUETOOTH),
-                      child: Text('Discovery Bluetooth')),
-                  ElevatedButton(
-                      onPressed: () => onDiscovery(EpsonEPOSPortType.ALL),
-                      child: Text('Discovery All')),
-                ],
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    ElevatedButton(
+                        onPressed: () => onDiscovery(EpsonEPOSPortType.TCP),
+                        child: Text('Discovery TCP')),
+                    ElevatedButton(
+                        onPressed: () => onDiscovery(EpsonEPOSPortType.USB),
+                        child: Text('Discovery USB')),
+                    ElevatedButton(
+                        onPressed: () => onDiscovery(EpsonEPOSPortType.BLUETOOTH),
+                        child: Text('Discovery Bluetooth')),
+                    ElevatedButton(
+                        onPressed: () => onDiscovery(EpsonEPOSPortType.ALL),
+                        child: Text('Discovery All')),
+                  ],
+                ),
               ),
               Flexible(
                   child: ListView.builder(
@@ -104,6 +115,7 @@ class _MyAppState extends State<MyApp> {
           printers = data;
         });
       } else {
+        print('no printers');
         setState(() {
           printers = [];
         });
@@ -145,7 +157,7 @@ class _MyAppState extends State<MyApp> {
     bytes += generator.text('Align right',
         styles: const PosStyles(align: PosAlign.right), linesAfter: 1);
     bytes += generator.qrcode('Barcode by escpos',
-        size: QRSize.Size4, cor: QRCorrection.H);
+        size: QRSize.size4, cor: QRCorrection.H);
     bytes += generator.feed(2);
 
     bytes += generator.row([

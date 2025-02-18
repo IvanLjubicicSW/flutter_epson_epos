@@ -228,10 +228,11 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         result.success(resp.toJSON())
         stopDiscovery()
       }, delay)
-    } catch (e: Exception) {
+    } catch (e: Epos2Exception) {
       Log.e("onDiscoveryPrinter", "Start not working ${call.method}");
       resp.success = false
       resp.message = "Error while search printer"
+      Log.e("onDiscoveryPrinter", e.errorStatus.toString())
       e.printStackTrace()
       result.success(resp.toJSON())
     }
