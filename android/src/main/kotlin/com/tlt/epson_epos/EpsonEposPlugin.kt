@@ -88,7 +88,7 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
   }
 
-  override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+  override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
     channel = MethodChannel(flutterPluginBinding.binaryMessenger, "epson_epos")
     channel.setMethodCallHandler(this)
     context = flutterPluginBinding.applicationContext
@@ -103,19 +103,16 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     );
   }
 
-  override fun onMethodCall(@NonNull call: MethodCall, @NonNull rawResult: Result) {
+  override fun onMethodCall(call: MethodCall, rawResult: Result) {
     val result = MethodResultWrapper(rawResult)
     Thread(MethodRunner(call, result)).start()
   }
 
-  override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+  override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
     channel.setMethodCallHandler(null)
   }
 
-  inner class MethodRunner(call: MethodCall, result: Result) : Runnable, ReceiveListener {
-    private val call: MethodCall = call
-    private val result: Result = result
-
+  inner class MethodRunner(private val call: MethodCall, private val result: Result) : Runnable, ReceiveListener {
 
     override fun onPtrReceive(p0: Printer?, p1: Int, p2: PrinterStatusInfo?, p3: String?) {
       Log.d(logTag, "${p0?.status} p2 $p2 p3 $p3")
@@ -151,9 +148,7 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
   }
 
-  class MethodResultWrapper(methodResult: Result) : Result {
-
-    private val methodResult: Result = methodResult
+  class MethodResultWrapper(private val methodResult: Result) : Result {
     private val handler: Handler = Handler(Looper.getMainLooper())
 
     override fun success(result: Any?) {
@@ -176,16 +171,14 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     try {
       Discovery.stop()
     } catch (e: Epos2Exception) {
-      if (e.errorStatus != Epos2Exception.ERR_PROCESSING) {
-
-      }
+      Log.e("stopDiscovery", e.printStackTrace().toString())
     }
   }
 
   /**
    * Discovery printers
    */
-  private fun onDiscovery(@NonNull call: MethodCall, @NonNull result: Result) {
+  private fun onDiscovery(call: MethodCall, result: Result) {
     val printType: String = call.argument<String>("type") as String
     Log.d(logTag, "onDiscovery type: $printType")
     when (printType) {
@@ -208,17 +201,17 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
   /**
    * Discovery Printers GENERIC
    */
-  private fun onDiscoveryPrinter(@NonNull call: MethodCall, portType: Int, @NonNull result: Result) {
+  private fun onDiscoveryPrinter(call: MethodCall, portType: Int, result: Result) {
     var delay:Long = 7000;
     if(portType == Discovery.PORTTYPE_USB){
       delay = 1000;
     }
     printers.clear()
-    var filter = FilterOption()
+    val filter = FilterOption()
     filter.portType = portType;
     Log.e("onDiscoveryPrinter", "Filter = $portType");
 
-    var resp = EpsonEposPrinterResult("onDiscoveryPrinter", false)
+    val resp = EpsonEposPrinterResult("onDiscoveryPrinter", false)
     try {
       Discovery.start(context, filter, mDiscoveryListener)
       Handler(Looper.getMainLooper()).postDelayed({
@@ -241,22 +234,22 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
 
 
-  private fun onGetPrinterInfo(@NonNull call: MethodCall, @NonNull result: Result) {
+  private fun onGetPrinterInfo(call: MethodCall, result: Result) {
     Log.d(logTag, "onGetPrinterInfo $call $result")
   }
 
-  private fun isPrinterConnected(@NonNull call: MethodCall, @NonNull result: Result) {
+  private fun isPrinterConnected(call: MethodCall, result: Result) {
     Log.d(logTag, "isPrinterConnected $call $result")
   }
 
-  private fun getPrinterSetting(@NonNull call: MethodCall, @NonNull result: Result) {
+  private fun getPrinterSetting(call: MethodCall, result: Result) {
     Log.d(logTag, "getPrinterSetting $call $result")
 
     val type: String = call.argument<String>("type") as String
     val series: String = call.argument<String>("series") as String
     val target: String = call.argument<String>("target") as String
 
-    var resp = EpsonEposPrinterResult("onPrint${type}", false)
+    val resp = EpsonEposPrinterResult("onPrint${type}", false)
     try {
       if (!connectPrinter(target, series)) {
         resp.success = false
@@ -276,18 +269,18 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
   }
 
-  private fun setPrinterSetting(@NonNull call: MethodCall, @NonNull result: Result) {
+  private fun setPrinterSetting(call: MethodCall, result: Result) {
     Log.d(logTag, "setPrinterSetting $call $result")
 
     val type: String = call.argument<String>("type") as String
     val series: String = call.argument<String>("series") as String
     val target: String = call.argument<String>("target") as String
 
-    val paperWidth: Int? = call.argument<String>("paper_width") as? Int
-    val printDensity: Int? = call.argument<String>("print_density") as? Int
-    val printSpeed: Int? = call.argument<String>("print_speed") as? Int
+    val paperWidth: Int? = call.argument<Int?>("paper_width")
+    val printDensity: Int? = call.argument<Int?>("print_density")
+    val printSpeed: Int? = call.argument<Int?>("print_speed")
 
-    var resp = EpsonEposPrinterResult("onPrint${type}", false)
+    val resp = EpsonEposPrinterResult("onPrint${type}", false)
     try {
       if (!connectPrinter(target, series)) {
         resp.success = false
@@ -331,14 +324,14 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
   /**
    * Print
    */
-  private fun onPrint(@NonNull call: MethodCall, @NonNull result: Result) {
+  private fun onPrint(call: MethodCall, result: Result) {
     val type: String = call.argument<String>("type") as String
     val series: String = call.argument<String>("series") as String
     val target: String = call.argument<String>("target") as String
 
     val commands: ArrayList<Map<String, Any>> =
       call.argument<ArrayList<Map<String, Any>>>("commands") as ArrayList<Map<String, Any>>
-    var resp = EpsonEposPrinterResult("onPrint${type}", false)
+    val resp = EpsonEposPrinterResult("onPrint${type}", false)
     try {
       if (!connectPrinter(target, series)) {
         resp.success = false
@@ -383,9 +376,9 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
   private val mDiscoveryListener = DiscoveryListener { deviceInfo ->
     Log.d(logTag, "Found: ${deviceInfo?.deviceName}")
-    if (deviceInfo?.deviceName != null && deviceInfo?.deviceName != "") {
-      var printer = EpsonEposPrinterInfo(deviceInfo.ipAddress,  deviceInfo.bdAddress , deviceInfo.macAddress,  deviceInfo.deviceName , deviceInfo.deviceType.toString(), deviceInfo.deviceType.toString()  , deviceInfo.target)
-      var printerIndex = printers.indexOfFirst { e -> e.ipAddress == deviceInfo.ipAddress }
+    if (deviceInfo?.deviceName != null && deviceInfo.deviceName != "") {
+      val printer = EpsonEposPrinterInfo(deviceInfo.ipAddress,  deviceInfo.bdAddress , deviceInfo.macAddress,  deviceInfo.deviceName , deviceInfo.deviceType.toString(), deviceInfo.deviceType.toString()  , deviceInfo.target)
+      val printerIndex = printers.indexOfFirst { e -> e.ipAddress == deviceInfo.ipAddress }
       if (printerIndex > -1) {
         printers[printerIndex] = printer
       } else {
@@ -406,7 +399,7 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
   }
 
   private fun connectPrinter(target: String, series: String): Boolean {
-    var printCons = getPrinterConstant(series)
+    val printCons = getPrinterConstant(series)
     if (mPrinter == null || mTarget != target) {
       mPrinter = Printer(printCons, 0, context)
       mTarget = target
@@ -438,7 +431,7 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         mTarget = null
         break
       } catch (e: Exception) {
-        Log.e(logTag, "disconnectPrinter Error ${e?.message}", e)
+        Log.e(logTag, "disconnectPrinter Error ${e.message}", e)
         mPrinter!!.clearCommandBuffer()
         throw e
       }
@@ -451,11 +444,10 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
       return
     }
     Log.d(logTag, "onGenerateCommand: $command")
-    val textData = StringBuilder()
 
-    var commandId: String = command["id"] as String
-    if (!commandId.isNullOrEmpty()) {
-      var commandValue = command["value"]
+    val commandId: String = command["id"] as String
+    if (commandId.isNotEmpty()) {
+      val commandValue = command["value"]
 
       when (commandId) {
 
@@ -475,10 +467,10 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
         "addImage" -> {
           try {
-            var width: Int = command["width"] as Int
-            var height: Int = command["height"] as Int
-            var posX: Int = command["posX"] as Int
-            var posY: Int = command["posY"] as Int
+            val width: Int = command["width"] as Int
+            val height: Int = command["height"] as Int
+            val posX: Int = command["posX"] as Int
+            val posY: Int = command["posY"] as Int
             val bitmap: Bitmap? = convertBase64toBitmap(commandValue as String)
             Log.d(logTag, "appendBitmap: $width x $height $posX $posY bitmap $bitmap")
             Printer.SETTING_PAPERWIDTH_80_0
@@ -610,19 +602,19 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
     }
 
     if (status?.errorStatus == Printer.AUTORECOVER_ERR){
-      if (status?.autoRecoverError == Printer.HEAD_OVERHEAT){
+      if (status.autoRecoverError == Printer.HEAD_OVERHEAT){
         errorMes = getErrorMessage("err_overheat")
         errorMes = getErrorMessage("err_head")
       }
-      if (status?.autoRecoverError == Printer.MOTOR_OVERHEAT){
+      if (status.autoRecoverError == Printer.MOTOR_OVERHEAT){
         errorMes = getErrorMessage("err_overheat")
         errorMes = getErrorMessage("err_motor")
       }
-      if (status?.autoRecoverError == Printer.BATTERY_OVERHEAT){
+      if (status.autoRecoverError == Printer.BATTERY_OVERHEAT){
         errorMes = getErrorMessage("err_overheat")
         errorMes = getErrorMessage("err_battery")
       }
-      if (status?.autoRecoverError == Printer.WRONG_PAPER){
+      if (status.autoRecoverError == Printer.WRONG_PAPER){
         errorMes = getErrorMessage("err_wrong_paper")
       }
     }
@@ -637,7 +629,7 @@ class EpsonEposPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
   }
 
   private fun getErrorMessage(errorKey: String, withNewLine: Boolean = true): String {
-    var errorMes = when (errorKey) {
+    val errorMes = when (errorKey) {
       "warn_receipt_near_end" -> {
         "Roll paper is nearly end."
       }
